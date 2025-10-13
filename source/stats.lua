@@ -326,8 +326,9 @@ function stats:sendonlinestatsscores()
     if playtest then return end
     corner('sendscore')
     pd.scoreboards.addScore('racetime', floor(save.total_racetime), function(status)
-        if status.code ~= "OK" then
+        if status.code ~= "OK" and not sending_failed then
             makepopup(text('whoops'), text('popup_leaderboard_failed'), text('ok'), false)
+			sending_failed = true
             vars.lb_racetime_result = "fail"
             vars.lb_crashes_result = "fail"
             vars.lb_degreescranked_result = "fail"
@@ -343,6 +344,7 @@ function stats:sendonlinestatsscores()
             pd.scoreboards.addScore('degreescranked', floor(save.total_degrees_cranked), function(status)
                 if status.code == "OK" then
                     stats:getonlinestatsscores()
+					sending_failed = false
                 else
                     vars.lb_racetime_result = "fail"
                     vars.lb_crashes_result = "fail"

@@ -50,7 +50,7 @@ function boat:init(mode, start_x, start_y, stage, stage_x, stage_y, follow_polyg
         end
 
         self.lerp = 0.1 -- Rate at which the rotation towards the angle is interpolated.
-        self.speed = 4.25 + (save['slot' .. save.current_story_slot .. '_circuit'] / 8) -- Forward movement speed of the boat.
+        self.speed = 4.25 + (speedrun_on and 4 or save['slot' .. save.current_story_slot .. '_circuit']) / 8 -- Forward movement speed of the boat.
 
         self.follow_polygon = listpoly(follow_polygon)
         self.follow_count = #self.follow_polygon / 2
@@ -114,6 +114,10 @@ function boat:init(mode, start_x, start_y, stage, stage_x, stage_y, follow_polyg
         else
             self.bakedboat = gfx.imagetable.new('images/race/boat')
         end
+
+		if save.absolute then
+			self.crankposition = pd.getCrankPosition()
+		end
 
         self.cam_x = pd.timer.new(0, 0, 0) -- Camera X position
         self.cam_x.discardOnCompletion = false
@@ -258,6 +262,9 @@ function boat:state(move, rowbot, turn)
     self.movable = move
     self.rowbot = rowbot
     self.turnable = turn
+	if turn and save.absolute then
+		self.crankposition = pd.getCrankPosition()
+	end
 end
 
 -- Starts boat movement and camera
@@ -503,12 +510,14 @@ function boat:beach_recovery()
         vars.overlay = "fade"
     end)
     pd.timer.performAfterDelay(2500, function()
-        self:state(true, true, true)
-        self:start()
+		if vars.in_progress then
+			self:state(true, true, true)
+			self:start()
+		end
     end)
 end
 
-function boat:update(delta)
+function boat:update()
     self.transform:reset()
     self.crash_transform:reset()
     if not perf then self.ripple:reset() end
@@ -619,7 +628,15 @@ function boat:update(delta)
         end
     end
     -- Make sure rotation winds up as integer 1 through 360
-    self.rotation = ((floor(self.rotation / 2) * 2)) % 360
+	if save.absolute and self.mode ~= "cpu" and self.turnable then
+		self.crankposition += pd.getCrankChange() * self.reversed
+		if not self.leaping then
+			self.rotation = ((floor(self.crankposition / 2) * 2)) % 360
+			self.crankage_divvied = abs(pd.getCrankChange())
+		end
+	else
+    	self.rotation = ((floor(self.rotation / 2) * 2)) % 360
+	end
     if self.rotation == 0 then self.rotation = 360 end
     -- Transform ALL the polygons!!!!1!
     self.transform:scale(((self.scale.value * self.boost_x.value) * self.reversed) * self.scale_factor, (self.scale.value * self.boost_y.value) * self.scale_factor)

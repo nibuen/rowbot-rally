@@ -1,4 +1,4 @@
-classes = {} -- fuck this
+classes = {}
 
 -- Importing things
 import 'CoreLibs/ui'
@@ -11,7 +11,9 @@ import 'CoreLibs/graphics'
 import 'CoreLibs/animation'
 import 'CoreLibs/nineslice'
 import 'scenemanager'
+import 'achievements'
 import 'opening'
+import 'cheevos'
 import 'title'
 scenemanager = scenemanager()
 
@@ -36,9 +38,15 @@ gfx.setLineWidth(2)
 show_crank = false -- do you show the crankindicator in this scene?
 show_crank_override = false -- If this is turned on, then show the crankindicator regardless of dock status.
 corner_active = false -- Is the corner UI active?
+sending_failed = false
 demo = true
 if not string.find(pd.metadata.bundleID, "demo") then demo = false end -- DEMO check.
 playtest = false -- Playtesting build - locks scoreboard sending, and self-destructs after launch.
+wait = false -- Wait variable
+
+speedrun_on = false
+speedrun_timer = false
+speedrun_time = 0
 
 -- Cheats checks
 enabled_cheats = false -- Set this to true if ANY cheats are enabled. Important!, as this stops saving cheated times to leaderboards
@@ -56,10 +64,13 @@ local lepak <const> = gfx.font.new('fonts/lepak') -- Kapel font, reversed
 local reverse <const> = string.reverse
 local kapel_doubleup <const> = gfx.font.new('fonts/kapel_doubleup') -- Kapel double-big font
 local pedallica <const> = gfx.font.new('fonts/pedallica') -- Pedallica font
+local times_new_rally <const> = gfx.font.new('fonts/times_new_rally')
 
 local button_image_big <const> = gfx.nineSlice.new('images/ui/button_big', 23, 5, 114, 31) -- Big button image
 local button_image_small <const> = gfx.nineSlice.new('images/ui/button_small', 26, 4, 47, 15) -- and the smaller button images
 local button_image_small2 <const> = gfx.nineSlice.new('images/ui/button_small2', 26, 4, 47, 15)
+local image_timer <const> = gfx.image.new('images/race/timer')
+local image_timer_best <const> = gfx.image.new('images/race/timer_best')
 
 local image_popup <const> = gfx.image.new('images/ui/popup') -- Pop-up UI Plate image
 local popup_in <const> = smp.new('audio/sfx/ui') -- Pop-up CHA-CHING! noise
@@ -153,6 +164,10 @@ function savecheck()
     save.slot3_circuit = save.slot3_circuit or 1
     save.slot3_crashes = save.slot3_crashes or 0
     save.slot3_racetime = save.slot3_racetime or 0
+	-- Shark Chase+
+	if save.rsp_unlocked == nil then save.rsp_unlocked = false end
+	save.rsp_score = save.rsp_score or 0
+	if save.seen_rsp == nil then save.seen_rsp = false end
     -- Preferences, adjustable in Options menu
     save.vol_music = save.vol_music or 5
     save.vol_sfx = save.vol_sfx or 5
@@ -160,6 +175,7 @@ function savecheck()
     if save.minimap == nil then save.minimap = false end
     if save.button_controls == nil then save.button_controls = pd.isSimulator == 1 and true or false end
     save.sensitivity = save.sensitivity or 3
+	if save.absolute == nil then save.absolute = false end
     -- Global stats
     if save.first_launch == nil then save.first_launch = true end
     save.stages_unlocked = save.stages_unlocked or 0
@@ -173,6 +189,9 @@ function savecheck()
     if save.seen_chill == nil then save.seen_chill = false end
     if save.seen_credits == nil then save.seen_credits = false end
     if save.perf == nil then save.perf = false end
+	save.speedrun_time = save.speedrun_time or 0
+	if save.speedrun_unlocked == nil then save.speedrun_unlocked = false end
+	if save.seen_speedrun == nil then save.seen_speedrun = false end
 end
 
 -- ... now we run that!
@@ -184,6 +203,84 @@ if save.perf then
 else
     perf = false
 end
+
+if save.stages_unlocked >= 6 then
+	save.rsp_unlocked = true
+end
+
+if (save.slot1_circuit == 4 and save.slot1_progress == "finish") or (save.slot2_circuit == 4 and save.slot2_progress == "finish") or (save.slot3_circuit == 4 and save.slot3_progress == "finish") then
+	save.speedrun_unlocked = true
+end
+
+achievements.initialize(achievementData, true)
+
+function updatecheevos()
+	if (save.slot1_circuit == 4 and save.slot1_progress == "finish") or (save.slot2_circuit == 4 and save.slot2_progress == "finish") or (save.slot3_circuit == 4 and save.slot3_progress == "finish") then
+		achievements.grant("champ")
+	end
+	if save.rsp_score >= 50 then
+		achievements.grant("rockandrow")
+	end
+	if save.speedrun_time > 0 then
+		achievements.grant("speedrun")
+	end
+	if save.unlocked_cheats then
+		achievements.grant("pumpkineater")
+	end
+end
+
+function updatestagecheevos()
+	if save.stages_unlocked >= 1 then achievements.grant('stage1') end
+	if save.stages_unlocked >= 2 then achievements.grant('stage2') end
+	if save.stages_unlocked >= 3 then achievements.grant('stage3') end
+	if save.stages_unlocked >= 4 then achievements.grant('stage4') end
+	if save.stages_unlocked >= 5 then achievements.grant('stage5') end
+	if save.stages_unlocked >= 6 then achievements.grant('stage6') end
+	if save.stages_unlocked >= 7 then achievements.grant('stage7') end
+end
+
+function updatemedalcheevos()
+	local flawless = 0
+	flawless += save.stage1_flawless and 1 or 0
+	flawless += save.stage2_flawless and 1 or 0
+	flawless += save.stage3_flawless and 1 or 0
+	flawless += save.stage4_flawless and 1 or 0
+	flawless += save.stage5_flawless and 1 or 0
+	flawless += save.stage6_flawless and 1 or 0
+	flawless += save.stage7_flawless and 1 or 0
+	achievements.advanceTo("flawless", flawless)
+	local speedy = 0
+	speedy += save.stage1_speedy and 1 or 0
+	speedy += save.stage2_speedy and 1 or 0
+	speedy += save.stage3_speedy and 1 or 0
+	speedy += save.stage4_speedy and 1 or 0
+	speedy += save.stage5_speedy and 1 or 0
+	speedy += save.stage6_speedy and 1 or 0
+	speedy += save.stage7_speedy and 1 or 0
+	achievements.advanceTo("speedy", speedy)
+	local sselwalf = 0
+	sselwalf += save.stage1_flawless_mirror and 1 or 0
+	sselwalf += save.stage2_flawless_mirror and 1 or 0
+	sselwalf += save.stage3_flawless_mirror and 1 or 0
+	sselwalf += save.stage4_flawless_mirror and 1 or 0
+	sselwalf += save.stage5_flawless_mirror and 1 or 0
+	sselwalf += save.stage6_flawless_mirror and 1 or 0
+	sselwalf += save.stage7_flawless_mirror and 1 or 0
+	achievements.advanceTo("sselwalf", sselwalf)
+	local ydeeps = 0
+	ydeeps += save.stage1_speedy_mirror and 1 or 0
+	ydeeps += save.stage2_speedy_mirror and 1 or 0
+	ydeeps += save.stage3_speedy_mirror and 1 or 0
+	ydeeps += save.stage4_speedy_mirror and 1 or 0
+	ydeeps += save.stage5_speedy_mirror and 1 or 0
+	ydeeps += save.stage6_speedy_mirror and 1 or 0
+	ydeeps += save.stage7_speedy_mirror and 1 or 0
+	achievements.advanceTo("ydeeps", ydeeps)
+end
+
+updatecheevos()
+updatestagecheevos()
+updatemedalcheevos()
 
 -- Math clamp function
 function math.clamp(val, lower, upper)
@@ -198,10 +295,12 @@ function savegame(hidecorner)
         save.slot2_racetime = floor(save.slot2_racetime)
         save.slot3_racetime = floor(save.slot3_racetime)
         save.total_degrees_cranked = floor(save.total_degrees_cranked)
+		save.total_playtime = floor(save.total_playtime)
         pd.datastore.write(save)
         if not hidecorner then
             corner('saving')
         end
+		achievements.save()
     end
 end
 
@@ -362,6 +461,7 @@ end
 
 -- Generates a pop-up UI. head_text, body_text, and button_text all take strings. callback is a function determining what happens on A press. b_close is a bool determining if B closes the pop-up.
 function makepopup(head_text, body_text, button_text, b_close, callback)
+	if vars.in_progress ~= nil and vars.in_progress == true then return end
     if popup == nil then -- If there isn't already a popup in existence...
         popup_in:setVolume(save.vol_sfx/5) -- Set the volume for the pop-up in sound,
         popup_in:play() -- and play it right away why not?
@@ -551,6 +651,39 @@ function shakies_y(time, int)
     anim_shakies_y = pd.timer.new(time or 500, int or 10, 0, pd.easingFunctions.outElastic)
 end
 
+function pd.mirrorStarted()
+	if not perf then
+		if vars.mirror ~= nil then
+			corner("perf", vars.mirror)
+		else
+			corner("perf")
+		end
+		perf = true
+		save.perf = true
+		if vars.perf_message_displayed ~= nil and not vars.perf_message_displayed then
+			vars.perf_message_displayed = true
+			if assets.image_flat_stage ~= nil then
+				assets.image_stage = assets.image_flat_stage
+			end
+			if assets.image_flat_stage_1 ~= nil then
+				assets.image_stage_1 = assets.image_flat_stage_1
+			end
+			if assets.image_flat_stage_2 ~= nil then
+				assets.image_stage_2 = assets.image_flat_stage_2
+			end
+			if assets.image_flat_stagec ~= nil then
+				assets.image_stagec = assets.image_flat_stagec
+			end
+			if assets.image_flat_stagec_1 ~= nil then
+				assets.image_stagec_1 = assets.image_flat_stagec_1
+			end
+			if assets.image_flat_stagec_2 ~= nil then
+				assets.image_stagec_2 = assets.image_flat_stagec_2
+			end
+		end
+	end
+end
+
 -- Final launch
 if save.first_launch then
     scenemanager:switchscene(opening, true)
@@ -558,10 +691,19 @@ else
     scenemanager:switchscene(title)
 end
 
+local drawoffsetx
+local drawoffsety
+
 local offsetx
 local offsety
 
 function pd.update()
+	delta = pd.getElapsedTime()
+	pd.resetElapsedTime()
+	if wait then
+		pd.wait(4000)
+		wait = false
+	end
 	drawoffsetx, drawoffsety = gfx.getDrawOffset()
     -- Pop-up UI update logic
     if anim_popup ~= nil and popup ~= nil then -- If the pop-up exists, and its animation exists...
@@ -576,7 +718,7 @@ function pd.update()
     if anim_shakies_y ~= nil then
         pd.display.setOffset(offsetx, anim_shakies_y.value)
     end
-    save.total_playtime += 1 -- Up the total playtime by one every frame while the game is open.
+    save.total_playtime += 30 * delta -- Up the total playtime by one every frame while the game is open.
     -- Catch-all stuff ...
     gfx.sprite.update()
     pd.timer.updateTimers()
@@ -599,4 +741,23 @@ function pd.update()
             playdate.display.flush()
         end
     end
+	drawoffsetx, drawoffsety = gfx.getDrawOffset()
+	if speedrun_on then
+		if speedrun_timer then
+			speedrun_time += 30 * delta
+		end
+		if save.speedrun_time > 0 then
+			image_timer_best:draw(0 - drawoffsetx, 3 - drawoffsety)
+			local bestmins, bestsecs, bestmils = timecalc(save.speedrun_time)
+			local best_buffer = bestmins .. ":" .. bestsecs .. "." .. bestmils
+			pedallica:drawText(best_buffer, 36 - drawoffsetx, 46 - drawoffsety)
+		else
+			image_timer:draw(0 - drawoffsetx, 3 - drawoffsety)
+		end
+		gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
+		local mins, secs, mils = timecalc(speedrun_time) -- Calc this thing out for the timer
+		local my_cool_buffer = mins .. ":" .. secs .. "." .. mils
+		times_new_rally:drawText(my_cool_buffer, 44 - drawoffsetx, 20 - drawoffsety)
+		gfx.setImageDrawMode(gfx.kDrawModeCopy)
+	end
 end

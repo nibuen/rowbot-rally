@@ -7,19 +7,23 @@ local text <const> = gfx.getLocalizedText
 
 function race:stage_init()
     assets.image_stagec_cpu = gfx.image.new('stages/2/stagec')
-    if perf then
-        assets.image_stage_1 = gfx.image.new('stages/2/stage_flat_1')
-        assets.image_stage_2 = gfx.image.new('stages/2/stage_flat_2')
-        assets.image_stagec_1 = gfx.image.new('stages/2/stagec_1')
-        assets.image_stagec_2 = gfx.image.new('stages/2/stagec_2')
-    else
-        assets.image_stage_1 = gfx.image.new('stages/2/stage_1')
-        assets.image_stage_2 = gfx.image.new('stages/2/stage_2')
-        assets.parallax_short_bake = gfx.image.new('stages/2/parallax_short_bake')
-        assets.parallax_long_bake = gfx.image.new('stages/2/parallax_long_bake')
-        assets.image_stagec_1 = assets.image_stage_1
-        assets.image_stagec_2 = assets.image_stage_2
-    end
+    assets.image_flat_stage_1 = gfx.image.new('stages/2/stage_flat_1')
+    assets.image_flat_stage_2 = gfx.image.new('stages/2/stage_flat_2')
+    assets.image_flat_stagec_1 = gfx.image.new('stages/2/stagec_1')
+    assets.image_flat_stagec_2 = gfx.image.new('stages/2/stagec_2')
+	if perf then
+		assets.image_stage_1 = assets.image_flat_stage_1
+		assets.image_stage_2 = assets.image_flat_stage_2
+		assets.image_stagec_1 = assets.image_flat_stagec_1
+		assets.image_stagec_2 = assets.image_flat_stagec_2
+	else
+		assets.image_stage_1 = gfx.image.new('stages/2/stage_1')
+		assets.image_stage_2 = gfx.image.new('stages/2/stage_2')
+		assets.parallax_short_bake = gfx.image.new('stages/2/parallax_short_bake')
+		assets.parallax_long_bake = gfx.image.new('stages/2/parallax_long_bake')
+		assets.image_stagec_1 = assets.image_stage_1
+		assets.image_stagec_2 = assets.image_stage_2
+	end
     assets.bug_1 = gfx.imagetable.new('stages/2/bug_1')
     assets.bug_2 = gfx.imagetable.new('stages/2/bug_2')
     assets.bug_3 = gfx.imagetable.new('stages/2/bug_3')
@@ -55,7 +59,7 @@ function race:stage_init()
         vars.cpu_current_lap = 1
         vars.cpu_current_checkpoint = 0
         vars.cpu_last_checkpoint = 0
-        if save['slot' .. save.current_story_slot .. '_circuit'] == 1 then
+        if save['slot' .. save.current_story_slot .. '_circuit'] == 1 and not speedrun_on then
             vars.follow_polygon = pd.geometry.polygon.new(315, 1705,
                 280, 1580,
                 235, 1540,
@@ -102,7 +106,7 @@ function race:stage_init()
                 805, 2130,
                 690, 2215,
                 630, 2100)
-        elseif save['slot' .. save.current_story_slot .. '_circuit'] == 2 then
+        elseif save['slot' .. save.current_story_slot .. '_circuit'] == 2 and not speedrun_on then
             vars.follow_polygon = pd.geometry.polygon.new(315, 1715,
                 330, 1590,
                 405, 1485,
@@ -139,7 +143,7 @@ function race:stage_init()
                 775, 1970,
                 670, 2035,
                 520, 2020)
-        elseif save['slot' .. save.current_story_slot .. '_circuit'] == 3 then
+        elseif save['slot' .. save.current_story_slot .. '_circuit'] == 3 and not speedrun_on then
             vars.follow_polygon = pd.geometry.polygon.new(320, 1740,
                 330, 1540,
                 385, 1365,
@@ -180,7 +184,7 @@ function race:stage_init()
                 670, 2135,
                 595, 2020,
                 470, 1975)
-        elseif save['slot' .. save.current_story_slot .. '_circuit'] == 4 then
+        elseif save['slot' .. save.current_story_slot .. '_circuit'] == 4 or speedrun_on then
             vars.follow_polygon = pd.geometry.polygon.new(320, 1710,
                 345, 1550,
                 415, 1430,

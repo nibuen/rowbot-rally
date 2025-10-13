@@ -12,6 +12,7 @@ local min <const> = math.min
 local max <const> = math.max
 local random <const> = math.random
 local text <const> = gfx.getLocalizedText
+local lerp <const> = pd.math.lerp
 
 class('chase').extends(gfx.sprite) -- Create the scene's class
 function chase:init(...)
@@ -28,7 +29,7 @@ function chase:init(...)
         else
             setpauseimage(max(0, min(200, floor(sprites.boat.x) - 100)), true)
         end
-        if vars.skippable then
+        if vars.skippable and not vars.endless then
             menu:addMenuItem(text('skipchase'), function()
                 self:win()
             end)
@@ -39,7 +40,11 @@ function chase:init(...)
                 fademusic(999)
                 vars.anim_overlay:resetnew(1000, 34, 1)
                 pd.timer.performAfterDelay(1000, function()
-                    title_memorize = 'story_mode'
+					if vars.endless then
+                    	title_memorize = 'robosharkplus'
+					else
+						title_memorize = 'story_mode'
+					end
                     scenemanager:switchscene(title, title_memorize)
                 end)
             end)
@@ -68,6 +73,8 @@ function chase:init(...)
         sfx_rock = smp.new('audio/sfx/rock'),
         oar = gfx.imagetable.new('images/chase/oar'),
         oar_ground = gfx.imagetable.new('images/chase/oar_ground'),
+		bars = gfx.image.new('images/chase/bars'),
+		bars_plus = gfx.image.new('images/chase/bars_plus'),
     }
     assets.sfx_crash:setVolume(save.vol_sfx/5)
     assets.sfx_blips:setVolume(save.vol_sfx/5)
@@ -82,6 +89,7 @@ function chase:init(...)
 
     vars = { -- All variables go here. Args passed in from earlier, scene variables, etc.
         skippable = args[1], -- A bool. Only true if the player's entering from a game over.
+		endless = args[2], -- is this the endless game version?
         boat_turn = 5,
         boat_turn_min = 9,
         boat_turn_max = 1,
@@ -113,6 +121,7 @@ function chase:init(...)
         rock_x = 0,
         rocks_passed = 0,
         lost = false,
+		show_loss_info = false,
         showdir = false,
         crashed_left = false,
         crashed_right = false,
@@ -121,7 +130,11 @@ function chase:init(...)
         -- Input handlers go here...
         AButtonDown = function()
             if vars.lost then
-                scenemanager:transitionsceneoneway(chase, true)
+				if vars.endless then
+					scenemanager:transitionsceneoneway(chase, false, true)
+				else
+                	scenemanager:transitionsceneoneway(chase, true)
+				end
             end
             self:spawnrock()
         end,
@@ -146,6 +159,8 @@ function chase:init(...)
     vars.anim_oar_1.repeats = true
     vars.anim_oar_1.discardOnCompletion = false
     vars.anim_oar_2.discardOnCompletion = false
+
+	vars.rocks_req = random(6, 8) + (2 * save['slot' .. save.current_story_slot .. '_circuit'])
 
     vars.anim_oar_2.timerEndedCallback = function()
         vars.anim_oar_2:resetnew(500 + (vars.boat_speed * 50), 1, 8.99)
@@ -303,13 +318,33 @@ function chase:init(...)
     function classes.chase_overlay:init()
         classes.chase_overlay.super.init(self)
         self:setIgnoresDrawOffset(true)
+		self:setSize(800, 240)
         self:moveTo(0, 0)
         self:setCenter(0, 0)
         self:setZIndex(99)
         self:add()
     end
-    function classes.chase_overlay:update()
-        self:setImage(assets.overlay[floor(vars.anim_overlay.value)])
+    function classes.chase_overlay:draw()
+		gfx.setColor(gfx.kColorWhite)
+		if vars.endless then
+			assets.bars_plus:draw(0, 0)
+			assets.kapel_doubleup_outline:drawText(vars.rocks_passed, 33, 211)
+		else
+			assets.bars:draw(0, 0)
+			gfx.fillRect(385, 215, 11, min(lerp(0, -82, vars.rocks_passed / vars.rocks_req), 0))
+		end
+		gfx.fillRect(4, 215, 11, min(lerp(0, -82, -(vars.crashes / 3) + 1), 0))
+		gfx.setColor(gfx.kColorBlack)
+        assets.overlay[floor(vars.anim_overlay.value)]:draw(0, 0)
+		if vars.show_loss_info then
+			gfx.imageWithText(text('chomped'), 400, 30):drawScaled(25, 10, 2)
+			assets.kapel_doubleup_outline:drawText(text('retry'), 25, 175)
+			assets.kapel_doubleup_outline:drawText(text('back'), 25, 195)
+			if save.rsp_score > vars.rocks_passed then
+				assets.kapel_doubleup_outline:drawTextAligned(text('bestscore') .. save.rsp_score, 375, 175, kTextAlignment.right)
+			end
+			assets.kapel_doubleup_outline:drawTextAligned(text('finalscore') .. vars.rocks_passed, 375, 195, kTextAlignment.right)
+		end
     end
 
     -- Set the sprites
@@ -328,10 +363,16 @@ end
 
 -- Scene update loop
 function chase:update()
-    if pd.isCrankDocked() and not save.button_controls then
-        show_crank = true
+    if pd.isCrankDocked() then
+		if save.button_controls then
+			if save.absolute then
+				show_crank = true
+			end
+		else
+        	show_crank = true
+		end
     end
-    if save.button_controls then
+    if save.button_controls and not save.absolute then
         vars.change = 1
         if pd.buttonIsPressed('up') then
             vars.change = 10.8
@@ -349,7 +390,7 @@ function chase:update()
     if vars.playing and vars.crashes >= 3 then
         self:lose()
     end
-    if vars.playing and vars.rocks_passed >= 10 then
+    if vars.playing and vars.rocks_passed >= vars.rocks_req and not vars.endless then
         self:win()
     end
     if vars.boat_can_move then
@@ -381,7 +422,9 @@ function chase:update()
     sprites.splash:moveTo(sprites.splash.x, 225 + (vars.crashes * 5) + vars.anim_boat_y.value + vars.anim_entrance.value)
     sprites.shark:moveBy((sprites.boat.x - sprites.shark.x) * 0.3, 0)
     sprites.shark:moveTo(sprites.shark.x, 400 - (vars.crashes * 5) - vars.anim_shark_chomp.value + (vars.anim_entrance.value * 2))
-    gfx.setDrawOffset((-sprites.boat.x + 200) * 0.3, 0)
+	if not vars.lost then
+    	gfx.setDrawOffset((-sprites.boat.x + 200) * 0.3, 0)
+	end
 end
 
 function chase:spawnrock()
@@ -434,6 +477,9 @@ function chase:win()
         vars.boat_can_move = false
         vars.boat_speed = 0
         vars.boat_can_crash = false
+		if vars.crashes == 0 then
+			achievements.grant('rockon')
+		end
         fademusic(1000)
         pd.timer.performAfterDelay(200, function()
             sprites.splash:remove()
@@ -450,6 +496,7 @@ function chase:win()
         pd.timer.performAfterDelay(2250, function()
             scenemanager:switchstory()
         end)
+		save.rsp_unlocked = true
     end
 end
 
@@ -471,12 +518,24 @@ function chase:lose()
         assets.sfx_cymbal:play()
         shakies_y()
     end)
+	if vars.endless then
+		if vars.rocks_passed > save.rsp_score then
+			save.rsp_score = vars.rocks_passed
+		end
+		if save.rsp_score >= 50 then achievements.grant('rockandrow') end
+		pd.scoreboards.addScore('robosharkplus', vars.rocks_passed, function(status, result)
+			if status.code ~= "OK" and not sending_failed then
+				makepopup(text('whoops'), text('popup_leaderboard_failed'), text('ok'), false)
+				sending_failed = true
+			else
+				sending_failed = false
+			end
+		end)
+	end
     pd.timer.performAfterDelay(2000, function()
-        gfx.pushContext(assets.chomp[2])
-            gfx.imageWithText(text('chomped'), 400, 30):drawScaled(25, 10, 2)
-            assets.kapel_doubleup_outline:drawText(text('retry'), 25, 175)
-            assets.kapel_doubleup_outline:drawText(text('back'), 25, 195)
-        gfx.popContext()
+        vars.show_loss_info = true
+		sprites.overlay:setIgnoresDrawOffset(false)
+		gfx.setDrawOffset(0, 0)
     end)
     vars.lost = true
 end

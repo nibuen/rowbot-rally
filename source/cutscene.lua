@@ -26,13 +26,19 @@ function cutscene:init(...)
         menu:removeAllMenuItems()
         setpauseimage(100)
 		if not vars.ending then
-			menu:addMenuItem(text('skipscene'), function()
-				assets.sfx:stop()
-			end)
-			menu:addMenuItem(text('quitfornow'), function()
-				vars.title = true
-				assets.sfx:stop()
-			end)
+			if vars.theater then
+				menu:addMenuItem(text('endscene'), function()
+					assets.sfx:stop()
+				end)
+			else
+				menu:addMenuItem(text('skipscene'), function()
+					assets.sfx:stop()
+				end)
+				menu:addMenuItem(text('quitfornow'), function()
+					vars.title = true
+					assets.sfx:stop()
+				end)
+			end
 		end
     end
 
@@ -44,6 +50,7 @@ function cutscene:init(...)
 
     vars = { -- All variables go here. Args passed in from earlier, scene variables, etc.
         play = args[1], -- What scene do we play?
+		theater = args[2], -- Bool — return to theater when the cutscene is done?
         title = false,
 		ending = false,
     }
@@ -69,28 +76,32 @@ function cutscene:init(...)
                 title_memorize = 'story_mode'
                 scenemanager:switchscene(title, title_memorize)
             else -- Progress the story.
-                if vars.play == 1 then
-                    save['slot' .. save.current_story_slot .. '_progress'] = 'tutorial'
-                elseif vars.play == 2 then
-                    save['slot' .. save.current_story_slot .. '_progress'] = 'race1'
-                elseif vars.play == 3 then
-                    save['slot' .. save.current_story_slot .. '_progress'] = 'race2'
-                elseif vars.play == 4 then
-                    save['slot' .. save.current_story_slot .. '_progress'] = 'race3'
-                elseif vars.play == 5 then
-                    save['slot' .. save.current_story_slot .. '_progress'] = 'race4'
-                elseif vars.play == 6 then
-                    save['slot' .. save.current_story_slot .. '_progress'] = 'chase'
-                elseif vars.play == 7 then
-                    save['slot' .. save.current_story_slot .. '_progress'] = 'race5'
-                elseif vars.play == 8 then
-                    save['slot' .. save.current_story_slot .. '_progress'] = 'race6'
-                elseif vars.play == 9 then
-                    save['slot' .. save.current_story_slot .. '_progress'] = 'race7'
-                elseif vars.play == 10 then
-                    save['slot' .. save.current_story_slot .. '_progress'] = 'finish'
-                end
-                scenemanager:switchstory()
+				if vars.theater then
+					scenemanager:switchscene(theater, vars.play)
+				else
+					if vars.play == 1 then
+						save['slot' .. save.current_story_slot .. '_progress'] = 'tutorial'
+					elseif vars.play == 2 then
+						save['slot' .. save.current_story_slot .. '_progress'] = 'race1'
+					elseif vars.play == 3 then
+						save['slot' .. save.current_story_slot .. '_progress'] = 'race2'
+					elseif vars.play == 4 then
+						save['slot' .. save.current_story_slot .. '_progress'] = 'race3'
+					elseif vars.play == 5 then
+						save['slot' .. save.current_story_slot .. '_progress'] = 'race4'
+					elseif vars.play == 6 then
+						save['slot' .. save.current_story_slot .. '_progress'] = 'chase'
+					elseif vars.play == 7 then
+						save['slot' .. save.current_story_slot .. '_progress'] = 'race5'
+					elseif vars.play == 8 then
+						save['slot' .. save.current_story_slot .. '_progress'] = 'race6'
+					elseif vars.play == 9 then
+						save['slot' .. save.current_story_slot .. '_progress'] = 'race7'
+					elseif vars.play == 10 then
+						save['slot' .. save.current_story_slot .. '_progress'] = 'finish'
+					end
+					scenemanager:switchstory()
+				end
             end
         end)
     end)
@@ -105,7 +116,7 @@ function cutscene:init(...)
     -- Set the sprites
     self:add()
 
-    save['slot' .. save.current_story_slot .. '_progress'] = 'cutscene' .. vars.play -- Story slot sanity check
+    if not vars.theater then save['slot' .. save.current_story_slot .. '_progress'] = 'cutscene' .. vars.play end -- Story slot sanity check
 end
 
 -- Scene update loop

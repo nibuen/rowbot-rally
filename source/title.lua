@@ -12,9 +12,11 @@ if not demo then
     import 'stats'
     import 'notif'
     import 'cheats'
+	import 'theater'
     import "Tanuk_CodeSequence"
 	import 'credits'
 end
+import 'speedrun'
 
 -- Setting up consts
 local pd <const> = playdate
@@ -40,6 +42,11 @@ function title:init(...)
 					scenemanager:transitionsceneoneway(credits, true)
 				end)
 			end
+			if save.stages_unlocked == 7 then
+				menu:addMenuItem(text('theater'), function()
+					scenemanager:transitionsceneoneway(theater)
+				end)
+			end
 			if save.seen_chill then
 				menu:addMenuItem(text('chillmode'), function()
 					fademusic()
@@ -63,6 +70,7 @@ function title:init(...)
             scenemanager:transitionsceneoneway(notif, text('cheatcode'), text('popup_cheat_big'), text('title_screen'), false, function()
                 scenemanager:switchscene(title)
             end)
+			updatecheevos()
         end, false)
         local cheat_code_small = Tanuk_CodeSequence({pd.kButtonDown, pd.kButtonDown, pd.kButtonLeft, pd.kButtonDown, pd.kButtonRight, pd.kButtonUp, pd.kButtonDown, pd.kButtonLeft, pd.kButtonB}, function()
             save.unlocked_cheats = true
@@ -75,6 +83,7 @@ function title:init(...)
             scenemanager:transitionsceneoneway(notif, text('cheatcode'), text('popup_cheat_small'), text('title_screen'), false, function()
                 scenemanager:switchscene(title)
             end)
+			updatecheevos()
         end, false)
         local cheat_code_tiny = Tanuk_CodeSequence({pd.kButtonUp, pd.kButtonDown, pd.kButtonDown, pd.kButtonLeft, pd.kButtonDown, pd.kButtonRight, pd.kButtonB, pd.kButtonDown, pd.kButtonB}, function()
             save.unlocked_cheats = true
@@ -87,6 +96,7 @@ function title:init(...)
             scenemanager:transitionsceneoneway(notif, text('cheatcode'), text('popup_cheat_tiny'), text('title_screen'), false, function()
                 scenemanager:switchscene(title)
             end)
+			updatecheevos()
         end, false)
         local cheat_code_retro = Tanuk_CodeSequence({pd.kButtonUp, pd.kButtonUp, pd.kButtonDown, pd.kButtonDown, pd.kButtonLeft, pd.kButtonRight, pd.kButtonLeft, pd.kButtonRight, pd.kButtonB}, function()
             save.unlocked_cheats = true
@@ -97,6 +107,7 @@ function title:init(...)
             scenemanager:transitionsceneoneway(notif, text('cheatcode'), text('popup_cheat_retro'), text('title_screen'), false, function()
                 scenemanager:switchscene(title)
             end)
+			updatecheevos()
         end, false)
         local cheat_code_scream = Tanuk_CodeSequence({pd.kButtonLeft, pd.kButtonDown, pd.kButtonDown, pd.kButtonLeft, pd.kButtonRight, pd.kButtonB, pd.kButtonUp, pd.kButtonUp, pd.kButtonB}, function()
             save.unlocked_cheats = true
@@ -107,6 +118,7 @@ function title:init(...)
             scenemanager:transitionsceneoneway(notif, text('cheatcode'), text('popup_cheat_scream'), text('title_screen'), false, function()
                 scenemanager:switchscene(title)
             end)
+			updatecheevos()
         end, false)
         local cheat_code_trippy = Tanuk_CodeSequence({pd.kButtonLeft, pd.kButtonUp, pd.kButtonRight, pd.kButtonDown, pd.kButtonLeft, pd.kButtonUp, pd.kButtonRight, pd.kButtonDown, pd.kButtonB}, function()
             save.unlocked_cheats = true
@@ -117,6 +129,7 @@ function title:init(...)
             scenemanager:transitionsceneoneway(notif, text('cheatcode'), text('popup_cheat_trippy'), text('title_screen'), false, function()
                 scenemanager:switchscene(title)
             end)
+			updatecheevos()
         end, false)
         local cheat_code_all = Tanuk_CodeSequence({pd.kButtonRight, pd.kButtonUp, pd.kButtonB, pd.kButtonDown, pd.kButtonUp, pd.kButtonB, pd.kButtonDown, pd.kButtonUp, pd.kButtonB}, function()
             save.unlocked_cheats = true
@@ -130,6 +143,7 @@ function title:init(...)
             scenemanager:transitionsceneoneway(notif, text('cheatcode'), text('popup_cheat_all'), text('title_screen'), false, function()
                 scenemanager:switchscene(title)
             end)
+			updatecheevos()
         end, false)
         local cheat_code_chill = Tanuk_CodeSequence({pd.kButtonDown, pd.kButtonDown, pd.kButtonDown, pd.kButtonDown, pd.kButtonDown, pd.kButtonDown, pd.kButtonDown, pd.kButtonUp, pd.kButtonB}, function()
             fademusic()
@@ -215,6 +229,30 @@ function title:init(...)
                     fademusic()
                     assets.sfx_proceed:play()
                     scenemanager:transitionscene(stages)
+				elseif vars.item_list[vars.selection] == 'speedrunmode' then
+					if save.seen_speedrun then
+						pd.timer.performAfterDelay(1000, function()
+							speedrun_on = true
+							speedrun_time = 0
+							speedrun_timer = true
+						end)
+						fademusic()
+						assets.sfx_proceed:play()
+						scenemanager:transitionsceneoneway(race, 1, 'story', false)
+						title_memorize = 'speedrun'
+					else
+						makepopup(text('speedrun_unlocked'), text('popup_speedrun'), text('ok'))
+						save.seen_speedrun = true
+					end
+				elseif vars.item_list[vars.selection] == 'robosharkplus' then
+					if save.seen_rsp then
+						assets.sfx_proceed:play()
+						fademusic()
+						scenemanager:transitionsceneoneway(chase, false, true)
+					else
+						makepopup(text('rsp_unlocked'), text('popup_rsp'), text('ok'))
+						save.seen_rsp = true
+					end
                 elseif vars.item_list[vars.selection] == 'stats' then
                     assets.sfx_proceed:play()
                     scenemanager:transitionsceneoneway(stats)
@@ -293,6 +331,12 @@ function title:init(...)
     if save.stages_unlocked >= 1 and not demo then
         table.insert(vars.item_list, 'time_trials')
     end
+	if save.speedrun_unlocked then
+		table.insert(vars.item_list, 'speedrunmode')
+	end
+	if save.rsp_unlocked then
+		table.insert(vars.item_list, 'robosharkplus')
+	end
     if not demo then
         table.insert(vars.item_list, 'stats')
     end

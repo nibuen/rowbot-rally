@@ -70,7 +70,7 @@ function options:init(...)
         transitioning = true,
         anim_wave_x = pd.timer.new(5000, 0, -58),
         anim_wave_y = pd.timer.new(1000, -30, 185, pd.easingFunctions.outCubic), -- Send the wave down from above
-        item_list = {'music', 'sfx', 'button_controls', 'sensitivity', 'ui', 'minimap', 'perf'},
+        item_list = {'music', 'sfx', 'button_controls', 'sensitivity', 'ui', 'minimap', 'absolute', 'perf'},
         selection = 1,
         offset = 1,
     }
@@ -96,15 +96,20 @@ function options:init(...)
                 end
                 self:sfx_change()
             elseif vars.selection == 3 then -- Button controls
-                if save.button_controls then
-                    save.button_controls = false
-                    assets.sfx_clickoff:play()
-                else
-                    save.button_controls = true
-                    assets.sfx_clickon:play()
-                end
+				if save.absolute then
+					shakies()
+					assets.sfx_bonk:play()
+				else
+					if save.button_controls then
+						save.button_controls = false
+						assets.sfx_clickoff:play()
+					else
+						save.button_controls = true
+						assets.sfx_clickon:play()
+					end
+				end
             elseif vars.selection == 4 then -- Sensitivity
-                if save.button_controls then
+                if save.button_controls or save.absolute then
                     shakies()
                     assets.sfx_bonk:play()
                 else
@@ -133,6 +138,14 @@ function options:init(...)
                     assets.sfx_clickon:play()
                 end
             elseif vars.selection == 7 then
+				if save.absolute then
+					save.absolute = false
+					assets.sfx_clickoff:play()
+				else
+					save.absolute = true
+					assets.sfx_clickon:play()
+				end
+			elseif vars.selection == 8 then
                 if perf then
                     perf = false
                     save.perf = false
@@ -164,7 +177,7 @@ function options:init(...)
     pd.timer.performAfterDelay(1000, function() -- After the wave's done animating inward...
         vars.transitioning = false -- Start accepting button presses to go back.
         vars.anim_wave_y:resetnew(5000, 185, 195, pd.easingFunctions.inOutCubic) -- Set the wave's idle animation,
-        vars.anim_wave_y.repeatCount = -1 -- make it repeat forever,
+        vars.anim_wave_y.repeats = true -- make it repeat forever,
         vars.anim_wave_y.reverses = true -- and make it loop!
         pd.inputHandlers.push(vars.optionsHandlers) -- Wait to push the input handlers, so you can't fuck with shit before you have a chance to read it.
     end)
@@ -199,7 +212,8 @@ function options:init(...)
         assets.pedallica:drawText(text('sensitivity_name'), 10, 85)
         assets.pedallica:drawText(text('ui_name'), 10, 100)
         assets.pedallica:drawText(text('minimap_name'), 10, 115)
-        assets.pedallica:drawText(text('perf_name'), 10, 130)
+        assets.pedallica:drawText(text('absolute_name'), 10, 130)
+		assets.pedallica:drawText(text('perf_name'), 10, 145)
 
         if save.vol_music > 0 then
             assets.pedallica:drawTextAligned(text('on'), 180, 30, kTextAlignment.right)
@@ -232,17 +246,27 @@ function options:init(...)
         else
             assets.pedallica:drawTextAligned(text('off'), 180, 115, kTextAlignment.right)
         end
-        if perf then
+        if save.absolute then
             assets.pedallica:drawTextAligned(text('on'), 180, 130, kTextAlignment.right)
         else
             assets.pedallica:drawTextAligned(text('off'), 180, 130, kTextAlignment.right)
         end
+		if perf then
+			assets.pedallica:drawTextAligned(text('on'), 180, 145, kTextAlignment.right)
+		else
+			assets.pedallica:drawTextAligned(text('off'), 180, 145, kTextAlignment.right)
+		end
 
-        if save.button_controls then
+        if save.button_controls and not save.absolute then
             gfx.setColor(gfx.kColorWhite)
             gfx.setDitherPattern(0.5, gfx.image.kDitherTypeBayer2x2)
             gfx.fillRect(10, 85, 180, 15)
             gfx.setColor(gfx.kColorBlack)
+		elseif save.absolute then
+			gfx.setColor(gfx.kColorWhite)
+			gfx.setDitherPattern(0.5, gfx.image.kDitherTypeBayer2x2)
+			gfx.fillRect(10, 70, 180, 30)
+			gfx.setColor(gfx.kColorBlack)
         end
 
         assets.pedallica:drawText(text(vars.item_list[vars.selection] .. '_desc'), 213, 48)

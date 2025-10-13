@@ -78,6 +78,7 @@ function results:init(...)
             if vars.stage == 1 and save.stages_unlocked == 0 then vars.showtimetrials = true end
             if save.stages_unlocked < vars.stage then
                 save.stages_unlocked = vars.stage
+				updatestagecheevos()
             end
             if vars.stage == 1 then
                 save['slot' .. save.current_story_slot .. '_progress'] = "cutscene3"
@@ -118,6 +119,7 @@ function results:init(...)
                     save['stage' .. vars.stage .. '_flawless'] = true
                 end
             end
+			updatemedalcheevos()
         end
         self:sendscores()
         newmusic('audio/sfx/win')
@@ -294,7 +296,7 @@ end
 function results:sendscores()
     if playtest or demo or pd.metadata.bundleID ~= "wtf.rae.rowbotrally" then return end
     corner('sendscore')
-    if vars.mode == "tt" and vars.win and not enabled_cheats then
+    if vars.mode == "tt" and vars.win and not enabled_cheats and not save.absolute then
         local board
         if vars.mirror then
             board = 'stage' .. vars.stage .. 'mirror'
@@ -303,21 +305,27 @@ function results:sendscores()
         end
         if perf then
             pd.scoreboards.addScore(board, vars.time, function(status, result)
-                if status.code ~= "OK" then
+                if status.code ~= "OK" and not sending_failed then
                     makepopup(text('whoops'), text('popup_leaderboard_failed'), text('ok'), false)
+					sending_failed = true
+				else
+					sending_failed = false
                 end
             end)
         else
             pd.scoreboards.addScore(board, vars.time, function(status, result)
-                if status.code ~= "OK" then
+                if status.code ~= "OK" and not sending_failed then
                     makepopup(text('whoops'), text('popup_leaderboard_failed'), text('ok'), false)
+					sending_failed = true
+				else
+					sending_failed = false
+					pd.scoreboards.addScore('racetime', math.floor(save.total_racetime), function(status)
+						pd.scoreboards.addScore('crashes', save.total_crashes, function(status)
+							pd.scoreboards.addScore('degreescranked', math.floor(save.total_degrees_cranked), function(status)
+							end)
+						end)
+					end)
                 end
-                pd.scoreboards.addScore('racetime', math.floor(save.total_racetime), function(status)
-                    pd.scoreboards.addScore('crashes', save.total_crashes, function(status)
-                        pd.scoreboards.addScore('degreescranked', math.floor(save.total_degrees_cranked), function(status)
-                        end)
-                    end)
-                end)
             end)
         end
     else

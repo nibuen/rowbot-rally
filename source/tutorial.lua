@@ -201,14 +201,16 @@ function tutorial:init(...)
         if vars.hud_open then
             assets.image_popup_banner:draw(0, 0)
             if vars.current_step == 6 then
-                if not save.button_controls then
+                if save.absolute then
+					assets.pedallica:drawTextAligned(text('tutorial_step_6d'), 200, 13, kTextAlignment.center)
+                elseif save.button_controls then
+                    assets.pedallica:drawTextAligned(text('tutorial_step_6b'), 200, 14, kTextAlignment.center)
+				else
                     if pd.isCrankDocked() then
                         assets.pedallica:drawTextAligned(text('tutorial_step_6c'), 200, 14, kTextAlignment.center)
                     else
                         assets.pedallica:drawTextAligned(text('tutorial_step_6a'), 200, 14, kTextAlignment.center)
                     end
-                else
-                    assets.pedallica:drawTextAligned(text('tutorial_step_6b'), 200, 14, kTextAlignment.center)
                 end
             elseif vars.current_step == 14 then
                 assets.image_tutorial_up:draw(10, 80 + vars.up.value)
@@ -265,7 +267,11 @@ function tutorial:progress()
     if vars.progressable then
         assets.sfx_clickon:play()
         vars.hud_open = false
-        vars.current_step += 1
+		if save.absolute and vars.current_step == 7 then
+			vars.current_step = 13
+		else
+        	vars.current_step += 1
+		end
         vars.progressable = false
         if vars.current_step == 3 then
             spritesboat:state(true, true, false)
@@ -367,8 +373,6 @@ function tutorial:leave(totitle)
 end
 
 function tutorial:update()
-    local delta = pd.getElapsedTime()
-    pd.resetElapsedTime()
     vars.x, vars.y = gfx.getDrawOffset() -- Gimme the draw offset
     local x = vars.x + vars.boundsx
     local y = vars.y + vars.boundsy

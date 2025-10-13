@@ -8,7 +8,6 @@ class('scenemanager').extends()
 
 function scenemanager:init()
     self.transitiontime = 1000
-    self.transitiontimeblastdoors = 500
     self.offsettime = 1000
     self.transitioning = false
 end

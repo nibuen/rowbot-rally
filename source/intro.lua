@@ -17,7 +17,7 @@ function intro:init(...)
         local menu = pd.getSystemMenu()
         menu:removeAllMenuItems()
         setpauseimage(200)
-		if not scenemanager.transitioning then
+		if not scenemanager.transitioning and not vars.leaving then
 			menu:addMenuItem(text('quitfornow'), function()
 				fademusic()
 				title_memorize = 'story_mode'

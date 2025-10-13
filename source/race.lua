@@ -1,6 +1,7 @@
 import 'title'
 import 'results'
 import 'boat'
+import 'speedrun'
 
 -- Setting up consts
 local pd <const> = playdate
@@ -52,7 +53,9 @@ function race:init(...)
                         vars.anim_hud:resetnew(200, vars.anim_hud.value, -130, pd.easingFunctions.inOutSine)
                         vars.anim_ui_offset:resetnew(200, vars.anim_ui_offset.value, 88, pd.easingFunctions.inOutSine)
                     else
-                        vars.minimap = pd.timer.new(200, vars.minimap.value, 130, pd.easingFunctions.inOutSine)
+						if not save.absolute then
+                        	vars.minimap = pd.timer.new(200, vars.minimap.value, 130, pd.easingFunctions.inOutSine)
+						end
                         vars.anim_hud:resetnew(200, vars.anim_hud.value, 0, pd.easingFunctions.inOutSine)
                         vars.anim_ui_offset:resetnew(200, vars.anim_ui_offset.value, 0, pd.easingFunctions.inOutSine)
                     end
@@ -94,6 +97,8 @@ function race:init(...)
         image_meter_p = gfx.imagetable.new('images/race/meter/meter_p'),
         button_controls = gfx.image.new('images/race/button_controls'),
         easier_cranking = gfx.image.new('images/race/easier_cranking'),
+		minimap_you = gfx.image.new('images/race/minimap_you'),
+		minimap_cpu = gfx.image.new('images/race/minimap_cpu'),
     }
     assets.sfx_countdown:setVolume(save.vol_sfx/5)
     assets.sfx_start:setVolume(save.vol_sfx/5)
@@ -175,7 +180,11 @@ function race:init(...)
         vars.anim_hud = pd.timer.new(500, -230, -130, pd.easingFunctions.outSine)
         vars.anim_ui_offset = pd.timer.new(0, 88, 88)
     else
-        vars.minimap = pd.timer.new(500, 300, 130, pd.easingFunctions.outSine)
+		if save.absolute then
+			vars.minimap = pd.timer.new(500, 300, 155, pd.easingFunctions.outSine)
+		else
+        	vars.minimap = pd.timer.new(500, 300, 130, pd.easingFunctions.outSine)
+		end
         vars.anim_hud = pd.timer.new(500, -130, 0, pd.easingFunctions.outSine)
         vars.anim_ui_offset = pd.timer.new(0, 0, 0)
     end
@@ -322,7 +331,7 @@ function race:init(...)
             local stage_progress_long_x = stage_x * -vars.stage_progress_long_x
             local stage_progress_long_y = stage_y * -vars.stage_progress_long_y
 
-            if time % 3 == 0 then
+            if floor(time) % 3 == 0 then
                 race:fill_polygons()
                 race:both_polygons()
             end
@@ -438,16 +447,18 @@ function race:init(...)
                     assets.image_item:draw(anim_hud, 0, "flipX")
                 end
                 -- Draw the power meter
-                assets.image_meter_r:getImage(floor(vars.rowbot * 14.5) + 1):draw(200, 177 - anim_hud, "flipX")
-                assets.image_meter_p:getImage(min(30, max(1, 30 - floor(vars.player * 14.5)))):draw(0, 177 - anim_hud, "flipX")
-                if save.button_controls then
-                    assets.button_controls:draw(323, 215 - anim_hud, "flipX")
-                elseif save.sensitivity < 3 then
-                    assets.easier_cranking:draw(323, 212 - anim_hud, "flipX")
-                end
-                if assets.shades ~= nil then
-                    assets.shades:draw(275 + vars.anim_shades_x.value, 215 - vars.anim_hud.value - vars.anim_shades_y.value, "flipX")
-                end
+				if not save.absolute then
+					assets.image_meter_r:getImage(floor(vars.rowbot * 14.5) + 1):draw(200, 177 - anim_hud, "flipX")
+					assets.image_meter_p:getImage(min(30, max(1, 30 - floor(vars.player * 14.5)))):draw(0, 177 - anim_hud, "flipX")
+					if save.button_controls then
+						assets.button_controls:draw(323, 215 - anim_hud, "flipX")
+					elseif save.sensitivity < 3 then
+						assets.easier_cranking:draw(323, 212 - anim_hud, "flipX")
+					end
+					if assets.shades ~= nil then
+						assets.shades:draw(275 + vars.anim_shades_x.value, 215 - vars.anim_hud.value - vars.anim_shades_y.value, "flipX")
+					end
+				end
                 if save.minimap and assets.minimap ~= nil then
                     assets.minimap:draw(0, vars.minimap.value)
                     local divvy
@@ -464,20 +475,10 @@ function race:init(...)
                     elseif vars.stage == 7 then
                         divvy = 41
                     end
-                    gfx.setLineWidth(1)
                     if spritescpu ~= nil then
-                        if vars.stage == 6 or vars.stage == 7 then
-                            gfx.drawCircleAtPoint(spritescpu.x / divvy, spritescpu.y / divvy + vars.minimap.value, 2)
-                        else
-                            gfx.drawCircleAtPoint(spritescpu.x / divvy, spritescpu.y / divvy + vars.minimap.value, 3)
-                        end
-                    end
-                    if vars.stage == 6 or vars.stage == 7 then
-                        gfx.fillCircleAtPoint(spritesboat.x / divvy, spritesboat.y / divvy + vars.minimap.value, 2)
-                    else
-                        gfx.fillCircleAtPoint(spritesboat.x / divvy, spritesboat.y / divvy + vars.minimap.value, 3)
-                    end
-                    gfx.setLineWidth(2)
+						assets.minimap_cpu:draw(spritescpu.x / divvy - 2, spritescpu.y / divvy + vars.minimap.value - 2)
+					end
+					assets.minimap_you:draw(spritesboat.x / divvy - 2, spritesboat.y / divvy + vars.minimap.value - 2)
                 end
             else
                 -- If there's some kind of stage overlay anim going on, play it.
@@ -494,26 +495,30 @@ function race:init(...)
                     assets.kapel_doubleup_outline:drawText(vars.lap_string, vars.anim_lap_string.value, 12)
                 end
                 -- Draw the timer
-                assets.image_timer:draw(anim_hud + anim_ui_offset, 3 - anim_ui_sevenfour)
-                gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
-                vars.my_cool_buffer = vars.mins .. ":" .. vars.secs .. "." .. vars.mils
-                assets.times_new_rally:drawText(vars.my_cool_buffer, 44 + anim_hud + anim_ui_offset, 20 - anim_ui_sevenfour)
-                gfx.setImageDrawMode(gfx.kDrawModeCopy)
+				if not speedrun_on then
+					assets.image_timer:draw(anim_hud + anim_ui_offset, 3 - anim_ui_sevenfour)
+					gfx.setImageDrawMode(gfx.kDrawModeFillWhite)
+					vars.my_cool_buffer = vars.mins .. ":" .. vars.secs .. "." .. vars.mils
+					assets.times_new_rally:drawText(vars.my_cool_buffer, 44 + anim_hud + anim_ui_offset, 20 - anim_ui_sevenfour)
+					gfx.setImageDrawMode(gfx.kDrawModeCopy)
+				end
                 -- Draw the Rocket Arms icon, when applicable
                 if assets.image_item ~= nil then
                     assets.image_item:draw(313 - anim_hud, 0)
                 end
                 -- Draw the power meter
-                assets.image_meter_r:getImage(floor(vars.rowbot * 14.5) + 1):draw(0, 177 - anim_hud)
-                assets.image_meter_p:getImage(min(30, max(1, 30 - floor(vars.player * 14.5)))):draw(200, 177 - anim_hud)
-                if save.button_controls then
-                    assets.button_controls:draw(5, 215 - anim_hud)
-                elseif save.sensitivity < 3 then
-                    assets.easier_cranking:draw(5, 212 - anim_hud)
-                end
-                if assets.shades ~= nil then
-                    assets.shades:draw(89 - vars.anim_shades_x.value, 215 - anim_hud - vars.anim_shades_y.value)
-                end
+				if not save.absolute then
+					assets.image_meter_r:getImage(floor(vars.rowbot * 14.5) + 1):draw(0, 177 - anim_hud)
+					assets.image_meter_p:getImage(min(30, max(1, 30 - floor(vars.player * 14.5)))):draw(200, 177 - anim_hud)
+					if save.button_controls then
+						assets.button_controls:draw(5, 215 - anim_hud)
+					elseif save.sensitivity < 3 then
+						assets.easier_cranking:draw(5, 212 - anim_hud)
+					end
+					if assets.shades ~= nil then
+						assets.shades:draw(89 - vars.anim_shades_x.value, 215 - anim_hud - vars.anim_shades_y.value)
+					end
+				end
                 if save.minimap and assets.minimap ~= nil then
                     assets.minimap:draw(0, vars.minimap.value)
                     local divvy
@@ -530,20 +535,10 @@ function race:init(...)
                     elseif vars.stage == 7 then
                         divvy = 41
                     end
-                    gfx.setLineWidth(1)
                     if spritescpu ~= nil then
-                        if vars.stage == 6 or vars.stage == 7 then
-                            gfx.drawCircleAtPoint(spritescpu.x / divvy, spritescpu.y / divvy + vars.minimap.value, 2)
-                        else
-                            gfx.drawCircleAtPoint(spritescpu.x / divvy, spritescpu.y / divvy + vars.minimap.value, 3)
-                        end
+                        assets.minimap_cpu:draw(spritescpu.x / divvy - 2, spritescpu.y / divvy + vars.minimap.value - 2)
                     end
-                    if vars.stage == 6 or vars.stage == 7 then
-                        gfx.fillCircleAtPoint(spritesboat.x / divvy, spritesboat.y / divvy + vars.minimap.value, 2)
-                    else
-                        gfx.fillCircleAtPoint(spritesboat.x / divvy, spritesboat.y / divvy + vars.minimap.value, 3)
-                    end
-                    gfx.setLineWidth(2)
+					assets.minimap_you:draw(spritesboat.x / divvy - 2, spritesboat.y / divvy + vars.minimap.value - 2)
                 end
             end
             gfx.setDrawOffset(x, y)
@@ -682,8 +677,26 @@ function race:finish(timeout, duration)
             vars.overlay = "fade"
             assets.sfx_finish:play() -- Applause!
         end
+		if speedrun_on and (not vars.won or vars.stage == 7) then
+			speedrun_timer = false
+		end
         pd.timer.performAfterDelay(2500, function()
-            scenemanager:switchscene(results, vars.stage, vars.mode, floor(vars.current_time), vars.won, timeout, spritesboat.crashes, vars.mirror)
+			if speedrun_on then
+				if vars.won then
+					if vars.stage < 7 then
+						scenemanager:switchscene(race, vars.stage + 1, story, false)
+					else
+						scenemanager:switchscene(speedrun)
+					end
+				else
+					scenemanager:transitionsceneoneway(title)
+					speedrun_on = false
+					speedrun_timer = false
+					speedrun_time = 0
+				end
+			else
+            	scenemanager:switchscene(results, vars.stage, vars.mode, floor(vars.current_time), vars.won, timeout, spritesboat.crashes, vars.mirror)
+			end
         end)
     end
 end
@@ -893,8 +906,6 @@ end
 
 -- Scene update loop
 function race:update()
-    local delta = pd.getElapsedTime()
-    pd.resetElapsedTime()
     if vars.mode == "debug" then -- If debug mode is enabled,
         -- These have to be in the update loop because there's no way to just check if a button's held on every frame using an input handler. Weird.
         if pd.buttonIsPressed('up') then
@@ -930,14 +941,10 @@ function race:update()
         end
         gfx.setDrawOffset(-spritesdebug.x + 200, -spritesdebug.y + 120) -- Move the camera to wherever the debug dot is.
     else
-        spritesboat:update(delta)
-        if spritescpu ~= nil then spritescpu:update(delta) end
+        spritesboat:update()
+        if spritescpu ~= nil then spritescpu:update() end
         if vars.in_progress then -- If the race is happenin', then
             self:timecalc(vars.current_time) -- Calc this thing out for the timer
-            -- if pd.getFPS() <= 25 and pd.getFPS() > 0 and not perf and not vars.perf_message_displayed then
-            --     corner("perf", vars.mirror) -- Warning to tell the user to turn on perf mode
-            --     vars.perf_message_displayed = true
-            -- end
             if spritesboat.beached and not spritesboat.leaping then -- Oh. If the boat's beached, then
                 self:finish(true, 400) -- end the race. Ouch.
             end
@@ -946,7 +953,7 @@ function race:update()
                 self:finish(true) -- YOU'RE OUT!!
             end
             save.total_racetime += 30 * delta -- Statz!
-            if vars.mode == "story" then -- If you're in the story mode...
+            if vars.mode == "story" and not speedrun_on then -- If you're in the story mode...
                 if save.current_story_slot == 1 then
                     save.slot1_racetime += 30 * delta -- Per-slot statz!!
                 elseif save.current_story_slot == 2 then

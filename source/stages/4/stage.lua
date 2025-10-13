@@ -5,14 +5,15 @@ local geo <const> = pd.geometry
 local random <const> = math.random
 
 function race:stage_init()
-    if perf then
-        assets.image_stage = gfx.image.new('stages/4/stage_flat')
-    else
-        assets.image_stage = gfx.image.new('stages/4/stage')
-        assets.parallax_short_bake = gfx.image.new('stages/4/parallax_short_bake')
-        assets.parallax_medium_bake = gfx.image.new('stages/4/parallax_medium_bake')
-        assets.parallax_long_bake = gfx.image.new('stages/4/parallax_long_bake')
-    end
+    assets.image_flat_stage = gfx.image.new('stages/4/stage_flat')
+	if perf then
+		assets.image_stage = assets.image_flat_stage
+	else
+		assets.image_stage = gfx.image.new('stages/4/stage')
+		assets.parallax_short_bake = gfx.image.new('stages/4/parallax_short_bake')
+		assets.parallax_medium_bake = gfx.image.new('stages/4/parallax_medium_bake')
+		assets.parallax_long_bake = gfx.image.new('stages/4/parallax_long_bake')
+	end
     assets.image_stagec = gfx.image.new('stages/4/stagec')
     assets.image_water_bg = gfx.image.new('stages/4/water_bg')
     assets.water = gfx.imagetable.new('stages/4/water')

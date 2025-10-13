@@ -6,14 +6,16 @@ local random <const> = math.random
 local smp <const> = pd.sound.sampleplayer
 
 function race:stage_init()
-    if perf then
-        assets.image_stage = gfx.image.new('stages/7/stage_flat')
-        assets.image_stagec = gfx.image.new('stages/7/stagec')
-    else
-        assets.image_stage = gfx.image.new('stages/7/stage')
-        assets.parallax_short_bake = gfx.image.new('stages/7/parallax_short_bake')
-        assets.image_stagec = assets.image_stage
-    end
+    assets.image_flat_stage = gfx.image.new('stages/7/stage_flat')
+    assets.image_flat_stagec = gfx.image.new('stages/7/stagec')
+	if perf then
+		assets.image_stage = assets.image_flat_stage
+		assets.image_stagec = assets.image_flat_stagec
+	else
+		assets.image_stage = gfx.image.new('stages/7/stage')
+		assets.parallax_short_bake = gfx.image.new('stages/7/parallax_short_bake')
+		assets.image_stagec = assets.image_stage
+	end
     assets.image_water_bg = gfx.image.new('stages/7/water_bg')
     assets.water = gfx.imagetable.new('stages/7/water')
     assets.popeyes = gfx.image.new('stages/7/popeyes')
@@ -35,7 +37,7 @@ function race:stage_init()
         vars.cpu_current_lap = 1
         vars.cpu_current_checkpoint = 0
         vars.cpu_last_checkpoint = 0
-        if save['slot' .. save.current_story_slot .. '_circuit'] == 1 then
+        if save['slot' .. save.current_story_slot .. '_circuit'] == 1 and not speedrun_on then
             vars.follow_polygon = pd.geometry.polygon.new(420, 1565,
 				365, 1485,
 				315, 1390,
@@ -113,7 +115,7 @@ function race:stage_init()
 				4095, 1370,
 				4155, 1165,
 				4155, 1005)
-		elseif save['slot' .. save.current_story_slot .. '_circuit'] == 2 then
+		elseif save['slot' .. save.current_story_slot .. '_circuit'] == 2 and not speedrun_on then
 			vars.follow_polygon = pd.geometry.polygon.new(380, 1545,
 				315, 1435,
 				335, 1300,
@@ -175,7 +177,7 @@ function race:stage_init()
 				4105, 1355,
 				4135, 1175,
 				4135, 905)
-		elseif save['slot' .. save.current_story_slot .. '_circuit'] == 3 then
+		elseif save['slot' .. save.current_story_slot .. '_circuit'] == 3 and not speedrun_on then
 			vars.follow_polygon = pd.geometry.polygon.new(420, 1565,
 				370, 1485,
 				315, 1400,
@@ -252,7 +254,7 @@ function race:stage_init()
 				4165, 1185,
 				4190, 1075,
 				4150, 935)
-		elseif save['slot' .. save.current_story_slot .. '_circuit'] == 4 then
+		elseif save['slot' .. save.current_story_slot .. '_circuit'] == 4 or speedrun_on then
 			vars.follow_polygon = pd.geometry.polygon.new(400, 1545,
 				345, 1475,
 				370, 1355,
