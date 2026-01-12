@@ -1,0 +1,10 @@
+name=RowBot Rally
+author=rae
+description=Team up with a mechanical pal and row for the gold in the annual Fish Bowl!
+bundleID=wtf.rae.rowbotrally
+version=1.0.1
+buildNumber=12173
+imagePath=images/system
+launchSoundPath=audio/sfx/launch
+pdxversion=20500
+buildtime=787818430
